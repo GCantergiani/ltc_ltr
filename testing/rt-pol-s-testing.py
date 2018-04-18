@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[5]:
+# In[1]:
 
 
 import pandas as pd
@@ -18,16 +18,16 @@ from IPython.display import Image
 
 # ## Read network file
 
-# In[13]:
+# In[2]:
 
 
 df = pd.read_csv('network.csv')
-df.head()
+df
 
 
 # ## Generate graph
 
-# In[17]:
+# In[3]:
 
 
 def generate_graph(df):
@@ -56,7 +56,7 @@ def generate_graph(df):
 
 # ## Plurality Attr
 
-# In[18]:
+# In[4]:
 
 
 def add_plurality_attribute(G1, G2, nodes):
@@ -75,17 +75,17 @@ def add_plurality_attribute(G1, G2, nodes):
             plurality = int(sum_weight/2) + 1
             
         G1.node[n]['plurality'] = plurality
-
+        print('Node {} plurality {}'.format(n, plurality))
     return G1
 
 
-# In[19]:
+# In[5]:
 
 
 g1, g2 = generate_graph(df)
 
 
-# In[20]:
+# In[6]:
 
 
 unique_nodes = set()
@@ -94,13 +94,13 @@ unique_nodes.update(df['target'].unique())
 len(unique_nodes)
 
 
-# In[21]:
+# In[7]:
 
 
 g1 = add_plurality_attribute(g1, g2, unique_nodes)
 
 
-# In[22]:
+# In[8]:
 
 
 def get_neighborhood(node, g1, g2, total_nodes):
@@ -152,7 +152,7 @@ def get_neighborhood(node, g1, g2, total_nodes):
             return neighborhood
 
 
-# In[35]:
+# In[9]:
 
 
 def linear_threshold_rank(node, G1, G2, total_nodes):
@@ -162,7 +162,7 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
     """
     linear_threshold_rank = []
     
-    PRINT_STEPS = False
+    PRINT_STEPS = True
 
     if PRINT_STEPS:
         print('-------------- Node: {} --------------'.format(node))
@@ -201,7 +201,7 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
             nodes_to_add_group.clear()
 
             if PRINT_STEPS:
-                print('\t group: {1}'.format(n, group))
+                print('\t group: {1}'.format(node, group))
 
             next_nodes = set()
             for next_node in neighbors:
@@ -234,7 +234,7 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
 
             if PRINT_STEPS:
                 print('\t \t \t new group {0} '.format(nodes_to_add_group))
-                print('{0} ; {1} ; {2}'.format(n, depth_level, len(group)))
+                print('{0} ; {1} ; {2}'.format(node, depth_level, len(group)))
                 print()
                 
                 
@@ -249,13 +249,13 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
     return linear_threshold_rank
 
 
-# In[39]:
+# In[10]:
 
 
 get_ipython().run_cell_magic('time', '', 'results = []\nfor node in unique_nodes:\n    results.extend(linear_threshold_rank(node, g1, g2, len(unique_nodes)))')
 
 
-# In[41]:
+# In[11]:
 
 
 df_results = pd.DataFrame(results)
