@@ -56,7 +56,7 @@ def generate_graph(df):
 
 # ## Plurality Attr
 
-# In[4]:
+# In[5]:
 
 
 def add_plurality_attribute(G1, G2, nodes):
@@ -79,13 +79,13 @@ def add_plurality_attribute(G1, G2, nodes):
     return G1
 
 
-# In[5]:
+# In[6]:
 
 
 g1, g2 = generate_graph(df)
 
 
-# In[6]:
+# In[7]:
 
 
 unique_nodes = set()
@@ -94,13 +94,22 @@ unique_nodes.update(df['target'].unique())
 len(unique_nodes)
 
 
-# In[7]:
+# In[8]:
 
 
 g1 = add_plurality_attribute(g1, g2, unique_nodes)
 
 
-# In[8]:
+# In[9]:
+
+
+g1.node[1]['plurality'] = 1
+g1.node[5]['plurality'] = 1
+g1.node[6]['plurality'] = 3 
+g1.node[9]['plurality'] = 2
+
+
+# In[10]:
 
 
 def get_neighborhood(node, g1, g2, total_nodes):
@@ -152,7 +161,7 @@ def get_neighborhood(node, g1, g2, total_nodes):
             return neighborhood
 
 
-# In[9]:
+# In[11]:
 
 
 def linear_threshold_rank(node, G1, G2, total_nodes):
@@ -176,7 +185,12 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
         nodes_to_add_group = set()
 
         # Get first neighbors (bootstrap nodes)
-        neighbors = set(neighborhood['nodes'])
+        neighbors = set()
+        
+        for bootstrap_node in neighborhood['nodes']:
+            neighbors.add(bootstrap_node)
+            neighbors.update(G1.neighbors(bootstrap_node))
+            neighbors.update(G2.neighbors(bootstrap_node))
 
         group = set()
         group.update(neighbors)
@@ -244,13 +258,13 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
     return linear_threshold_rank
 
 
-# In[10]:
+# In[12]:
 
 
 get_ipython().run_cell_magic('time', '', 'results = []\nfor node in unique_nodes:\n    results.extend(linear_threshold_rank(node, g1, g2, len(unique_nodes)))')
 
 
-# In[11]:
+# In[13]:
 
 
 df_results = pd.DataFrame(results)

@@ -1,7 +1,7 @@
 
 # coding: utf-8
 
-# In[1]:
+# In[25]:
 
 
 import pandas as pd
@@ -14,20 +14,20 @@ from IPython.display import Image
 
 # ## Graph
 
-# ![title](./graph.png)
+# ![title](./graph_2.jpeg)
 
 # ## Read network file
 
-# In[2]:
+# In[26]:
 
 
-df = pd.read_csv('network.csv')
+df = pd.read_csv('network_2.csv')
 df
 
 
 # ## Generate graph
 
-# In[3]:
+# In[27]:
 
 
 def generate_graph(df):
@@ -56,7 +56,7 @@ def generate_graph(df):
 
 # ## Plurality Attr
 
-# In[4]:
+# In[28]:
 
 
 def add_plurality_attribute(G1, G2, nodes):
@@ -79,13 +79,13 @@ def add_plurality_attribute(G1, G2, nodes):
     return G1
 
 
-# In[5]:
+# In[29]:
 
 
 g1, g2 = generate_graph(df)
 
 
-# In[6]:
+# In[30]:
 
 
 unique_nodes = set()
@@ -94,13 +94,13 @@ unique_nodes.update(df['target'].unique())
 len(unique_nodes)
 
 
-# In[7]:
+# In[31]:
 
 
 g1 = add_plurality_attribute(g1, g2, unique_nodes)
 
 
-# In[8]:
+# In[33]:
 
 
 def get_neighborhood(node, g1, g2, total_nodes):
@@ -152,7 +152,13 @@ def get_neighborhood(node, g1, g2, total_nodes):
             return neighborhood
 
 
-# In[9]:
+# In[40]:
+
+
+set(get_neighborhood(1, g1, g2,  len(unique_nodes))[1]['nodes'])
+
+
+# In[41]:
 
 
 def linear_threshold_rank(node, G1, G2, total_nodes):
@@ -244,13 +250,13 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
     return linear_threshold_rank
 
 
-# In[10]:
+# In[42]:
 
 
 get_ipython().run_cell_magic('time', '', 'results = []\nfor node in unique_nodes:\n    results.extend(linear_threshold_rank(node, g1, g2, len(unique_nodes)))')
 
 
-# In[11]:
+# In[43]:
 
 
 df_results = pd.DataFrame(results)

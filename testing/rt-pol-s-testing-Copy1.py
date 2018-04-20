@@ -176,7 +176,12 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
         nodes_to_add_group = set()
 
         # Get first neighbors (bootstrap nodes)
-        neighbors = set(neighborhood['nodes'])
+        neighbors = set()
+        
+        for bootstrap_node in neighborhood['nodes']:
+            neighbors.add(bootstrap_node)
+            neighbors.update(G1.neighbors(bootstrap_node))
+            neighbors.update(G2.neighbors(bootstrap_node))
 
         group = set()
         group.update(neighbors)
