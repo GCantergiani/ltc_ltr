@@ -212,7 +212,11 @@ if __name__ == "__main__":
 
     g1 = add_plurality_attribute(g1, g2, unique_nodes)
 
-    parallel_results = Parallel(n_jobs=2, batch_size=100)(
+    print('starting calculation')
+    parallel_results = Parallel(n_jobs=25,
+                                #batch_size=1000,
+                                #pre_dispatch=1000,
+                                verbose=100)(
                           delayed(linear_threshold_rank)(
                             node=n, 
                             G1=g1,
