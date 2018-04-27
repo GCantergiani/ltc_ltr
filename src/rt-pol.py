@@ -1,6 +1,8 @@
 import pandas as pd
 import networkx as nx
+import multiprocessing
 from joblib import Parallel, delayed
+
 
 def generate_graph(df):
     """
@@ -9,7 +11,6 @@ def generate_graph(df):
                the tuple source, target is not unique, so for each
                occurrence we update the weight attribute
     :return: The main graph (G1), a the reverse one (G2)
-    
     """
 
     # Create first directed graph
@@ -38,7 +39,7 @@ def add_plurality_attribute(G1, G2, nodes):
     Add plurality attribute.
     """
     for n in nodes:
-        
+
         if(G1.degree(n) == 0):
             plurality = sys.maxsize
         else:
@@ -47,7 +48,7 @@ def add_plurality_attribute(G1, G2, nodes):
                 sum_weight = sum_weight + G1.get_edge_data(g2_node_source, n)['weight']
 
             plurality = int(sum_weight/2) + 1
-            
+
         G1.node[n]['plurality'] = plurality
 
     return G1
@@ -67,10 +68,10 @@ def get_neighborhood(node, g1, g2, total_nodes):
     """
     Calculate nodes according at the neighborhood level.
     Using a node as bootstrap:
-    - The first level is only the node, 
+    - The first level is only the node,
     - The second level is the first node and their neighbors
-    - The third level .... 
-    
+    - The third level ....
+
     :param node: The boostrap node identifier
     :param g1: Main graph
     :param g2: Reverse graph
@@ -80,14 +81,13 @@ def get_neighborhood(node, g1, g2, total_nodes):
     """
     old_nodes = set()
     new_nodes = set()
-    
+
     neighborhood = []
-    neighborhood.append({'inital_node':node,
-                         's': 0, 
-                         'nodes':[node]})
+    neighborhood.append({'inital_node': node,
+                         's': 0,
+                         'nodes': [node]})
 
     new_nodes.add(node)
-    last_nodes = None
 
     for idx, n in enumerate(range(total_nodes)):
 
@@ -96,17 +96,16 @@ def get_neighborhood(node, g1, g2, total_nodes):
             nodes_to_add.update(g1.neighbors(new_node))
             nodes_to_add.update(g2.neighbors(new_node))
 
-        old_nodes= old_nodes.union(new_nodes)
+        old_nodes = old_nodes.union(new_nodes)
 
         new_nodes.clear()
         new_nodes.update(nodes_to_add)
 
-
         nodes_s_level = set(old_nodes).union(new_nodes)
 
-        neighborhood.append({'inital_node':node,
-                             's':idx + 1, 
-                             'nodes':nodes_s_level})
+        neighborhood.append({'inital_node': node,
+                             's': idx + 1,
+                             'nodes': nodes_s_level})
 
         if len(nodes_s_level) == total_nodes:
             return neighborhood
@@ -114,20 +113,31 @@ def get_neighborhood(node, g1, g2, total_nodes):
     return neighborhood
 
 
+def save_parallel_process(data, process_id):
+
+    df = pd.DataFrame(data)
+
+    file_name = 'parallel_{}.csv'.format(process_id)
+    with open(file_name, 'a') as file:
+        df.to_csv(file,
+                  index=False,
+                  header=False)
+
+
 def linear_threshold_rank(node, G1, G2, total_nodes):
     """
-    Calculate the lTR for each node 
+    Calculate the lTR for each node
     - https://www.sciencedirect.com/science/article/pii/S0950705117304975
     """
     linear_threshold_rank = []
-    
+
     PRINT_STEPS = False
 
     if PRINT_STEPS:
         print('-------------- Node: {} --------------'.format(node))
-              
+
     neighborhoods = get_neighborhood(node, g1, g2, total_nodes)
-    
+
     for neighborhood in neighborhoods:
 
         first_step = True
@@ -145,7 +155,7 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
 
         depth_level = 0
 
-        while( first_step or (len(nodes_to_add_group) >= 1) ):
+        while(first_step or (len(nodes_to_add_group) >= 1)):
 
             first_step = False
 
@@ -178,7 +188,7 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
                 group_influce = 0
                 for node_group in group:
                     if(G1.get_edge_data(node_group, n_sub_level)):
-                        group_influce = group_influce + G1.get_edge_data(node_group,n_sub_level)['weight']
+                        group_influce = group_influce + G1.get_edge_data(node_group, n_sub_level)['weight']
 
                 if PRINT_STEPS:
                     print('\t \t group {0} | influce {1}'.format(group, group_influce))
@@ -190,17 +200,19 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
                 print('\t \t \t new group {0} '.format(nodes_to_add_group))
                 print('{0} ; {1} ; {2}'.format(node, depth_level, len(group)))
                 print()
-                
-                
-            linear_threshold_rank.append({'node':node,
-                                          'k':depth_level,
-                                          'group_influenced':group.copy(),
-                                          'number_influenced':len(group),
-                                          's':neighborhood['s']})
-            
-            depth_level = depth_level +1 
-        
-    return linear_threshold_rank
+
+            linear_threshold_rank.append({'node': node,
+                                          'k': depth_level,
+                                          'number_influenced': len(group),
+                                          's': neighborhood['s']})
+            depth_level = depth_level + 1
+
+    current = multiprocessing.current_process()
+    process_id = current.name[current.name.index('-') + 1:]
+
+    save_parallel_process(linear_threshold_rank, process_id)
+
+    return None
 
 
 if __name__ == "__main__":
@@ -208,27 +220,15 @@ if __name__ == "__main__":
     df = pd.read_csv('rt-pol.txt')
 
     g1, g2 = generate_graph(df)
-    unique_nodes = get_unique_nodes(df)    
+    unique_nodes = get_unique_nodes(df)
 
     g1 = add_plurality_attribute(g1, g2, unique_nodes)
 
     print('starting calculation')
-    parallel_results = Parallel(n_jobs=25,
-                                #batch_size=1000,
-                                #pre_dispatch=1000,
+    parallel_results = Parallel(n_jobs=4,
                                 verbose=100)(
                           delayed(linear_threshold_rank)(
-                            node=n, 
+                            node=n,
                             G1=g1,
-                            G2=g2, 
+                            G2=g2,
                             total_nodes=len(unique_nodes)) for n in unique_nodes)
-
-
-    dic_to_pandas = []
-
-    for n_jobs in parallel_results:
-        for row in n_jobs:
-            dic_to_pandas.append(row)
-
-    df_out = pd.DataFrame(dic_to_pandas)
-    df_out.to_csv('df_out.csv',index=False)
