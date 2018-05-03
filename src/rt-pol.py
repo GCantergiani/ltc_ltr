@@ -1,7 +1,13 @@
+import argparse
+import logging
 import pandas as pd
 import networkx as nx
 import multiprocessing
+import time
+
 from joblib import Parallel, delayed
+
+logger = logging.getLogger(__name__ if __name__ != '__main__' else __package__)
 
 
 def generate_graph(df):
@@ -50,6 +56,38 @@ def add_plurality_attribute(G1, G2, nodes):
             plurality = int(sum_weight/2) + 1
 
         G1.node[n]['plurality'] = plurality
+
+    return G1
+
+
+def add_min_attribute(G1, G2, nodes):
+    """
+    Add min attribute.
+    """
+    for n in nodes:
+
+        if(G1.degree(n) == 0):
+            plurality = sys.maxsize
+        else:
+            G1.node[n]['plurality'] = 1
+
+    return G1
+
+
+def add_max_attribute(G1, G2, nodes):
+    """
+    Add max attribute.
+    """
+    for n in nodes:
+
+        if(G1.degree(n) == 0):
+            plurality = sys.maxsize
+        else:
+            sum_weight = 0
+            for g2_node_source in G2.neighbors(n):
+                sum_weight = sum_weight + G1.get_edge_data(g2_node_source, n)['weight']
+
+        G1.node[n]['plurality'] = sum_weight
 
     return G1
 
@@ -214,17 +252,26 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
 
     return None
 
+def main(algorithm_weight):
 
-if __name__ == "__main__":
+    logger.info('Starting the previous calculations ...')
+    start_total_time = time.time()
 
     df = pd.read_csv('rt-pol.txt')
 
     g1, g2 = generate_graph(df)
     unique_nodes = get_unique_nodes(df)
 
-    g1 = add_plurality_attribute(g1, g2, unique_nodes)
+    if algorithm_weight == 'plurality':
+        g1 = add_plurality_attribute(g1, g2, unique_nodes)
+    elif algorithm_weight == 'min':
+        g1 = add_min_attribute(g1, g2, unique_nodes)
+    elif algorithm_weight == 'max':
+        g1 = add_max_attribute(g1, g2, unique_nodes)
+    else:
+        raise ValueError('Invalid algorithm type')
 
-    print('starting calculation')
+    logger.info('Starting LTC calculation ...')
     parallel_results = Parallel(n_jobs=4,
                                 verbose=100)(
                           delayed(linear_threshold_rank)(
@@ -232,3 +279,27 @@ if __name__ == "__main__":
                             G1=g1,
                             G2=g2,
                             total_nodes=len(unique_nodes)) for n in unique_nodes)
+
+    logger.info('Finished execution')
+    logger.info('Duration: {} seconds'.format(time.time() - start_total_time))
+
+
+if __name__ == "__main__":
+
+    parser = argparse.ArgumentParser(
+        description='Attribute selection algorithm')
+
+
+    parser.add_argument(
+        '--algorithm-weight',
+        choices=['plurality', 'min', 'max'],
+        help='Algorithm to define node weights of the nodes',
+        required=True)
+
+    logging.basicConfig(
+        level='DEBUG',
+        format='%(asctime)-15s %(name)-20s %(levelname)-8s %(message)s')
+    
+    args = parser.parse_args()
+
+    main(args.algorithm_weight)
