@@ -174,7 +174,7 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
     if PRINT_STEPS:
         print('-------------- Node: {} --------------'.format(node))
 
-    neighborhoods = get_neighborhood(node, g1, g2, total_nodes)
+    neighborhoods = get_neighborhood(node, G1, G2, total_nodes)
 
     for neighborhood in neighborhoods:
 
@@ -252,7 +252,7 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
 
     return None
 
-def main(algorithm_weight):
+def main(algorithm_weight, n_jobs):
 
     logger.info('Starting the previous calculations ...')
     start_total_time = time.time()
@@ -272,7 +272,7 @@ def main(algorithm_weight):
         raise ValueError('Invalid algorithm type')
 
     logger.info('Starting LTC calculation ...')
-    parallel_results = Parallel(n_jobs=4,
+    parallel_results = Parallel(n_jobs=n_jobs,
                                 verbose=100)(
                           delayed(linear_threshold_rank)(
                             node=n,
@@ -296,10 +296,16 @@ if __name__ == "__main__":
         help='Algorithm to define node weights of the nodes',
         required=True)
 
+    parser.add_argument(
+        '--n-jobs',
+        type=int,
+        help='Number of n-jobs (multiprocessing)',
+        required=True)
+
     logging.basicConfig(
         level='DEBUG',
         format='%(asctime)-15s %(name)-20s %(levelname)-8s %(message)s')
     
     args = parser.parse_args()
 
-    main(args.algorithm_weight)
+    main(args.algorithm_weight, args.n_jobs)
