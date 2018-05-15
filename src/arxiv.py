@@ -32,10 +32,10 @@ def generate_graph(df):
     G2 = nx.Graph()
     for row in df.itertuples():
         try:
-            weight = G2[row.id1][row.id1]['weight']
-            G2.add_edge(row.id1, row.id1, weight=weight + 1)
+            weight = G2[row.id2][row.id1]['weight']
+            G2.add_edge(row.id2, row.id1, weight=weight + 1)
         except KeyError:
-            G2.add_edge(row.id1, row.id1, weight=1)
+            G2.add_edge(row.id2, row.id1, weight=1)
 
     return G1, G2
 
