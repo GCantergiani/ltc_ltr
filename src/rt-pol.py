@@ -6,6 +6,7 @@ import multiprocessing
 import time
 
 from joblib import Parallel, delayed
+from random import randint
 
 logger = logging.getLogger(__name__ if __name__ != '__main__' else __package__)
 
@@ -45,17 +46,14 @@ def add_plurality_attribute(G1, G2, nodes):
     Add plurality attribute.
     """
     for n in nodes:
-
         if(G1.degree(n) == 0):
-            plurality = sys.maxsize
+            G1.node[n]['plurality'] = sys.maxsize
         else:
             sum_weight = 0
             for g2_node_source in G2.neighbors(n):
                 sum_weight = sum_weight + G1.get_edge_data(g2_node_source, n)['weight']
 
-            plurality = int(sum_weight/2) + 1
-
-        G1.node[n]['plurality'] = plurality
+            G1.node[n]['plurality'] = int(sum_weight/2) + 1
 
     return G1
 
@@ -65,9 +63,8 @@ def add_min_attribute(G1, G2, nodes):
     Add min attribute.
     """
     for n in nodes:
-
         if(G1.degree(n) == 0):
-            plurality = sys.maxsize
+            G1.node[n]['plurality'] = sys.maxsize
         else:
             G1.node[n]['plurality'] = 1
 
@@ -79,16 +76,37 @@ def add_max_attribute(G1, G2, nodes):
     Add max attribute.
     """
     for n in nodes:
-
         if(G1.degree(n) == 0):
-            plurality = sys.maxsize
+            G1.node[n]['plurality'] = sys.maxsize
         else:
             sum_weight = 0
             for g2_node_source in G2.neighbors(n):
                 sum_weight = sum_weight + G1.get_edge_data(g2_node_source, n)['weight']
 
-        G1.node[n]['plurality'] = sum_weight
+            G1.node[n]['plurality'] = sum_weight
 
+    return G1
+
+
+def add_random_attribute(G1, G2, nodes):
+    """
+    Add max attribute.
+    """
+    for n in nodes:
+        weights = []
+
+        if(G1.degree(n) == 0):
+            G1.node[n]['plurality'] = sys.maxsize
+        else:
+            sum_weight = 0
+            for g2_node_source in G2.neighbors(n):
+                weights.append(G1.get_edge_data(g2_node_source, n)['weight'])
+
+            if weights:
+                G1.node[n]['plurality'] = randint(a=min(weights),
+                                                  b=max(weights) + 1)
+            else:
+                G1.node[n]['plurality'] = 1
     return G1
 
 
@@ -151,18 +169,19 @@ def get_neighborhood(node, g1, g2, total_nodes):
     return neighborhood
 
 
-def save_parallel_process(data, process_id):
+def save_parallel_process(data, algo, process_id):
 
     df = pd.DataFrame(data)
 
-    file_name = 'parallel_{}.csv'.format(process_id)
+    file_name = 'parallel_{alg}_{ppid}.csv'.format(alg=algo,
+                                                   ppid=process_id)
     with open(file_name, 'a') as file:
         df.to_csv(file,
                   index=False,
                   header=False)
 
 
-def linear_threshold_rank(node, G1, G2, total_nodes):
+def linear_threshold_rank(node, G1, G2, total_nodes, algo):
     """
     Calculate the lTR for each node
     - https://www.sciencedirect.com/science/article/pii/S0950705117304975
@@ -248,7 +267,7 @@ def linear_threshold_rank(node, G1, G2, total_nodes):
     current = multiprocessing.current_process()
     process_id = current.name[current.name.index('-') + 1:]
 
-    save_parallel_process(linear_threshold_rank, process_id)
+    save_parallel_process(linear_threshold_rank, algo, process_id)
 
     return None
 
@@ -268,6 +287,8 @@ def main(algorithm_weight, n_jobs):
         g1 = add_min_attribute(g1, g2, unique_nodes)
     elif algorithm_weight == 'max':
         g1 = add_max_attribute(g1, g2, unique_nodes)
+    elif algorithm_weight == 'random':
+        g1 = add_random_attribute(g1, g2, unique_nodes)
     else:
         raise ValueError('Invalid algorithm type')
 
@@ -278,7 +299,8 @@ def main(algorithm_weight, n_jobs):
                             node=n,
                             G1=g1,
                             G2=g2,
-                            total_nodes=len(unique_nodes)) for n in unique_nodes)
+                            total_nodes=len(unique_nodes),
+                            algo=algorithm_weight) for n in unique_nodes)
 
     logger.info('Finished execution')
     logger.info('Duration: {} seconds'.format(time.time() - start_total_time))
@@ -292,7 +314,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         '--algorithm-weight',
-        choices=['plurality', 'min', 'max'],
+        choices=['plurality', 'min', 'max', 'random'],
         help='Algorithm to define node weights of the nodes',
         required=True)
 
