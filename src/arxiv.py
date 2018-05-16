@@ -275,8 +275,6 @@ def main(algorithm_weight, n_jobs):
 
     df = pd.read_csv('CA-GrQc.txt', delimiter='\t')
 
-    df = df.head(500)
-
     g1, g2 = generate_graph(df)
     unique_nodes = get_unique_nodes(df)
 
