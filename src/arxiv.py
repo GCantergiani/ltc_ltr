@@ -289,6 +289,8 @@ def main(algorithm_weight, n_jobs):
     else:
         raise ValueError('Invalid algorithm type')
 
+    largest_cc = max(nx.connected_components(g1), key=len)
+
     logger.info('Starting LTC calculation ...')
     parallel_results = Parallel(n_jobs=n_jobs,
                                 verbose=100)(
@@ -296,8 +298,8 @@ def main(algorithm_weight, n_jobs):
                             node=n,
                             G1=g1,
                             G2=g2,
-                            total_nodes=len(unique_nodes),
-                            algo=algorithm_weight) for n in unique_nodes)
+                            total_nodes=len(largest_cc),
+                            algo=algorithm_weight) for n in largest_cc)
 
     logger.info('Finished execution')
     logger.info('Duration: {} seconds'.format(time.time() - start_total_time))
@@ -327,3 +329,4 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     main(args.algorithm_weight, args.n_jobs)
+
