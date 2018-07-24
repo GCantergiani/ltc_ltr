@@ -98,12 +98,11 @@ def add_random_attribute(G1, G2, nodes):
         if(G1.degree(n) == 0):
             G1.node[n]['plurality'] = sys.maxsize
         else:
-            sum_weight = 0
             for g2_node_source in G2.neighbors(n):
                 weights.append(G1.get_edge_data(g2_node_source, n)['weight'])
 
             G1.node[n]['plurality'] = randint(a=min(weights),
-                                              b=max(weights) + 1)
+                                              b=sum(weights)+1)
     return G1
 
 
